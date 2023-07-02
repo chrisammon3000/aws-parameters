@@ -10,7 +10,7 @@ write_to = "awsparameters/_version.py"
 
 [project]
 name = "aws-parameters"
-version = "0.1.1"
+version = "0.1.2"
 description = "Access AWS configurations in a streamlined and efficient manner."
 authors = [{ name = "@chrisammon3000", email = "gclindsey@gmail.com" }]
 license = {file = "LICENSE"}
@@ -26,7 +26,7 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "boto3>=1.20"
+    "boto3>=1.15.3"
 ]
 
 [project.optional-dependencies]
