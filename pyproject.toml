@@ -10,12 +10,12 @@ write_to = "awsparameters/_version.py"
 
 [project]
 name = "aws-parameters"
-version = "0.1.0"
+version = "0.1.1"
 description = "Access AWS configurations in a streamlined and efficient manner."
 authors = [{ name = "@chrisammon3000", email = "gclindsey@gmail.com" }]
 license = {file = "LICENSE"}
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 keywords = ["aws", "systems manager", "configuration", "secretsmanager"]
 classifiers = [
     "Development Status :: 3 - Alpha",
