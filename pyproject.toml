@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools", "wheel", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["awsparameters"]
+
+[tool.setuptools_scm]
+write_to = "awsparameters/_version.py"
+
+[project]
+name = "aws-parameters"
+version = "0.1.0"
+description = "Access AWS configurations in a streamlined and efficient manner."
+authors = [{ name = "@chrisammon3000", email = "gclindsey@gmail.com" }]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["aws", "systems manager", "configuration", "secretsmanager"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "boto3>=1.20"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=21.12",
+]
+test = [
+    "pytest>=6.2",
+    "pytest-cov>=3.0",
+    "coverage>=6.0",
+    "black>=21.12",
+    "boto3>=1.20",
+    "moto[sqs,sns,firehose,s3,sts]>=2.2",
+]
+
+[tool.black]
+line-length = 79
+target-version = ['py310']
+preview = true
+
+[tool.coverage.report]
+skip_empty = true
+
+[tool.coverage.run]
+branch = true
+source = ["awsparameters"]
