@@ -18,12 +18,13 @@ def camel_to_snake(name):
 
 @lru_cache
 def get_parameter_value(ssm_client, parameter_path: str) -> str:
-    logger.info(f"Getting parameter {parameter_path}")
+    logger.info(f"Retrieving parameter {parameter_path}")
     return ssm_client.get_parameter(Name=parameter_path)["Parameter"]["Value"]
 
 
 @lru_cache
 def get_secret_value(secretsmanager_client, secret_id: str) -> str:
+    logger.info(f"Retrieving secret {secret_id}")
     return secretsmanager_client.get_secret_value(SecretId=secret_id)["SecretString"]
 
 
@@ -82,59 +83,58 @@ class SessionManager:
     def __getattr__(self, name):
         return getattr(self.session, name)
 
-
-# TODO instantiate the variables as empty attributes and then fetch them on demand so that intellisense works
 class ConfigManager(JsonModel):
     def __init__(self, **kwargs) -> None:
         self._service = kwargs["service"]
         self._attr_map = kwargs["attr_map"]
         self._client = kwargs["client"]
 
-    def __getattr__(self, name: str) -> Union[str, dict, list, int, float, bool]:
-        """Fetches and caches values from SSM Parameter Store or Secrets Manager. Will not fetch the same value twice.
+        for name in self._attr_map.keys():
+            setattr(self, f'_{name}', None)  # storing initial None values in "_name" attributes
+            getter = self.make_getter(name)
+            setattr(self.__class__, name, property(getter))  # create properties for each attribute
 
-        Args:
-            name (str): Name of the parameter or secret to fetch
+    def make_getter(self, name):
+        def getter(instance):
+            if instance.__dict__[f'_{name}'] is None:  # check if the corresponding "_name" attribute is None
+                if instance._service == "ssm":
+                    value = get_parameter_value(instance._client, instance._attr_map[name])
+                elif instance._service == "secretsmanager":
+                    value = get_secret_value(instance._client, instance._attr_map[name])
+                else:
+                    raise ValueError(f"Service {instance._service} not supported, must be one of 'ssm' or 'secretsmanager'")
 
-        Raises:
-            ValueError: Bad value for service type
-            AttributeError: Parameter or secret not found
+                # detect json
+                try:
+                    value = json.loads(value)
+                except json.JSONDecodeError:
+                    pass
 
-        Returns:
-            Union[str, dict, list, int, float, bool]: Value of the parameter or secret
-        """
-        if name in self._attr_map.keys() and name not in self.__dict__.keys():
-            if self._service == "ssm":
-                value = get_parameter_value(
-                    self._client, self._attr_map[name]
-                )
-            elif self._service == "secretsmanager":
-                value = get_secret_value(
-                    self._client, self._attr_map[name]
-                )
-            else:
-                raise ValueError(
-                    f"Service {self._service} not supported, must be one of 'ssm' or 'secretsmanager'"
-                )
-
-            # detect json
-            try:
-                value = json.loads(value)
-            except json.JSONDecodeError:
-                pass
-
-            setattr(self, name, value)
-            return value
-        else:
-            raise AttributeError(f"Could not find '{name}' in {self._service} mapping")
+                instance.__dict__[f'_{name}'] = value  # store the value in "_name" attribute
+            return instance.__dict__[f'_{name}']
+        return getter
 
     def list(self):
         return list(self._attr_map.values())
 
     def __str__(self) -> str:
-        return json.dumps({k: v for k, v in self.__dict__.items() if k != "_client"})
+        return json.dumps({k: v for k, v in self.__dict__.items() if not k.startswith('_') and k != "client"})
 
+    def __getitem__(self, key):
+        return getattr(self, key)
 
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+class ParamsConfigManager(ConfigManager):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+class SecretsConfigManager(ConfigManager):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+# TODO support for retrieving all params under a path (this circumvents the need for deploying a mapping parameter)
 class AppConfig:
     """Class to manage the configuration of the application using SSM Parameter Store and Secrets Manager.
 
@@ -155,20 +155,20 @@ class AppConfig:
 
     def __init__(
         self,
-        mapping_path: str = None,
+        mappings_path: str = None,
         path_separator: str = "/",
         boto3_session=None,
         region_name: str = None,
         **kwargs,
     ) -> None:
-        self.mapping_path = mapping_path
+        self.mappings_path = mappings_path
         self.session = SessionManager(
             boto3_session,
             region_name,
             get_clients=["ssm"])
     
         self.ssm_paths, self.secrets_paths = \
-            self._load_service_mappings() if mapping_path else \
+            self._load_service_mappings() if mappings_path else \
             (kwargs["ssm_paths"], kwargs["secrets_paths"])
         
         self.services, self._attr_map = self._build_attr_mappings(
@@ -179,10 +179,16 @@ class AppConfig:
         for service in self.services:
             if service not in self.session.clients:
                 self.session.get_client(service)
+            if service == "ssm":
+                attr = "params"
+                _cls = ParamsConfigManager
+            elif service == "secretsmanager":
+                attr = "secrets"
+                _cls = SecretsConfigManager
             setattr(
                 self,
-                "params" if service == "ssm" else "secrets",
-                ConfigManager(
+                attr,
+                _cls(
                     service=service,
                     attr_map=self._attr_map[service],
                     client=self.session.clients[service],
@@ -191,7 +197,7 @@ class AppConfig:
 
     def _load_service_mappings(self) -> Tuple[dict, dict]:
         service_mappings = json.loads(self.session.clients["ssm"].get_parameter(
-            Name=self.mapping_path,
+            Name=self.mappings_path,
         )["Parameter"]["Value"])
         return service_mappings.get("ssm", None), service_mappings.get("secretsmanager", None)
 
@@ -210,7 +216,7 @@ class AppConfig:
         for name, mapping in collections.items():
             mappings[name] = \
             {
-                camel_to_snake(item.split(kwargs.get("path_separator"))[-1]): item for item in mapping
+                item.split(kwargs.get("path_separator"))[-1]: item for item in mapping
             }
         return services, mappings
 
