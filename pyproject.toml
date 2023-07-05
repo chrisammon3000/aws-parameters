@@ -15,7 +15,7 @@ description = "Access AWS configurations in a streamlined and efficient manner."
 authors = [{ name = "@chrisammon3000", email = "gclindsey@gmail.com" }]
 license = {file = "LICENSE"}
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 keywords = ["aws", "systems manager", "configuration", "secretsmanager"]
 classifiers = [
     "Development Status :: 3 - Alpha",
