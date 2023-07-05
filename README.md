@@ -5,9 +5,14 @@
 Streamlined, efficient access to configuration values in AWS SSM Parameter Store and SecretsManager.
 
 ## Description
-* Immediate access to available parameters and secrets 
-* Reduce development overhead for Python applications running on AWS
-* Maintain least-privileged permissions to parameters and secrets
+When building Python applications in AWS, it is common to use SSM Parameter Store and SecretsManager to store configuration values. This library provides a simple interface to access these values in a way that is fast, efficient, and secure. It will perform lazy loading for all available parameters or secrets, meaning it will only make API calls when a value is requested:
+- When parameter or secret property is accessed, it first checks if the value has been computed before (cached). If it has, it immediately returns that cached value.
+- If the value hasn't been computed before, it fetches the value and then returns it. This means that your Python app is only calling the AWS API when it needs to.
+
+### Advantages
+* Fast, simple interface to configuration values that can reduce development overhead when working with SSM Parameter Store and SecretsManager
+* Immediate access to available parameters and secrets through intellisense, `map` or `list` methods
+* Maintain least-privileged permissions to parameters and secrets using path-based access control
 
 ## Quickstart
 Install the library using pip.
@@ -15,30 +20,38 @@ Install the library using pip.
 pip install -i https://test.pypi.org/simple/ aws-parameters
 ```
 
-<!-- Export the AWS region to the environment.
-```bash
-export AWS_REGION=<region>
-```
+## Environment Setup
 
-Send JSON data to various AWS services.
+### Methods of Access
+There are 3 methods of accessing SSM Parameters and SecretsManager Secrets values using `aws-parameters.`
+1. From JSON file or object (fastest, does not make additional API calls)
+2. From API Methods `describe-parameters` or `list-secrets` (second fastest)
+3. From deployed SSM Parameter mapping (slowest but least error prone, makes two additional API calls and parses responses)
+
+#### JSON File or Object
+
+### AWS API Methods
+
+### SSM Parameter Mapping
+
+## Usage
+See [Methods of Access](#methods-of-access) for the different ways to setup the environment and access SSM Parameters and SecretsManager Secrets values.
+
+### SSM Parameter Mapping
 ```python
-from awsjsondataset import AwsJsonDataset
+from awsparameters import AppConfig
 
-# create a list of JSON objects
-data = [ {"id": idx, "data": "<data>"} for idx in range(100) ]
+# (optional) Create a boto3 session
+session = boto3.Session(region_name=AWS_REGION)
 
-# Wrap using AwsJsonDataset
-dataset = AwsJsonDataset(data=data)
+# Define the parameter mappings path
+config_path = f"/{APP_NAME}/{STAGE}/{AWS_REGION}/GfedbInfrastructureParamMappings"
 
-# Send to SQS queue
-dataset.sqs("<sqs_queue_url>").send_messages()
-
-# Send to SNS topic
-dataset.sns("<sns_topic_arn>").publish_messages()
-
-# Send to Kinesis Firehose stream
-dataset.firehose("<delivery_stream_name>").put_records()
-``` -->
+# Create the AppConfig object from the mappings path
+app = AppConfig(
+    mapping_path=infra_config_path, 
+    boto3_session=session)
+```
 
 ## Local Development
 Follow the steps to set up the deployment environment.
