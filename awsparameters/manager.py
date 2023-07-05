@@ -18,13 +18,13 @@ def camel_to_snake(name):
 
 @lru_cache
 def get_parameter_value(ssm_client, parameter_path: str) -> str:
-    logger.info(f"Getting parameter {parameter_path}")
+    logger.info(f"Retrieving parameter {parameter_path}")
     return ssm_client.get_parameter(Name=parameter_path)["Parameter"]["Value"]
 
 
 @lru_cache
 def get_secret_value(secretsmanager_client, secret_id: str) -> str:
-    logger.info(f"Getting secret {secret_id}")
+    logger.info(f"Retrieving secret {secret_id}")
     return secretsmanager_client.get_secret_value(SecretId=secret_id)["SecretString"]
 
 
@@ -83,12 +83,6 @@ class SessionManager:
     def __getattr__(self, name):
         return getattr(self.session, name)
 
-# TODO self.__class__ will make new attributes available to ALL class instances
-# so ssm params will show up in the class for secrets
-# solutions
-# 1) Declare self.__class__ on a high level class for Params or Secrets that in inherits from ConfigManager
-# so that the attributes are only available to those classes
-# 2) Try reading from a dict where values are initialized as None and then populated on first access
 class ConfigManager(JsonModel):
     def __init__(self, **kwargs) -> None:
         self._service = kwargs["service"]
@@ -99,8 +93,6 @@ class ConfigManager(JsonModel):
             setattr(self, f'_{name}', None)  # storing initial None values in "_name" attributes
             getter = self.make_getter(name)
             setattr(self.__class__, name, property(getter))  # create properties for each attribute
-
-        print("")
 
     def make_getter(self, name):
         def getter(instance):
@@ -134,6 +126,13 @@ class ConfigManager(JsonModel):
     def __setitem__(self, key, value):
         setattr(self, key, value)
 
+class ParamsConfigManager(ConfigManager):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+class SecretsConfigManager(ConfigManager):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
 # TODO support for retrieving all params under a path (this circumvents the need for deploying a mapping parameter)
 class AppConfig:
@@ -180,10 +179,16 @@ class AppConfig:
         for service in self.services:
             if service not in self.session.clients:
                 self.session.get_client(service)
+            if service == "ssm":
+                attr = "params"
+                _cls = ParamsConfigManager
+            elif service == "secretsmanager":
+                attr = "secrets"
+                _cls = SecretsConfigManager
             setattr(
                 self,
-                "params" if service == "ssm" else "secrets",
-                ConfigManager(
+                attr,
+                _cls(
                     service=service,
                     attr_map=self._attr_map[service],
                     client=self.session.clients[service],
