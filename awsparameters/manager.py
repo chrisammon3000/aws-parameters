@@ -159,23 +159,16 @@ class AppConfig:
         path_separator: str = "/",
         boto3_session=None,
         region_name: str = None,
-        **kwargs,
+
     ) -> None:
         self.mappings_path = mappings_path
+        self.path_separator = path_separator
         self.session = SessionManager(
             boto3_session,
             region_name,
-            get_clients=["ssm"])
-    
-        self.ssm_paths, self.secrets_paths = \
-            self._load_service_mappings() if mappings_path else \
-            (kwargs["ssm_paths"], kwargs["secrets_paths"])
-        
-        self.services, self._attr_map = self._build_attr_mappings(
-            ssm_paths=self.ssm_paths, 
-            secrets_paths=self.secrets_paths,
-            path_separator=path_separator,
-        )
+            get_clients=["ssm"] if mappings_path else [])
+        self.ssm_paths, self.secrets_paths = self._load_service_mappings() if mappings_path else None
+        self.services, self._attr_map = self._build_attr_mappings()
         for service in self.services:
             if service not in self.session.clients:
                 self.session.get_client(service)
@@ -201,13 +194,12 @@ class AppConfig:
         )["Parameter"]["Value"])
         return service_mappings.get("ssm", None), service_mappings.get("secretsmanager", None)
 
-    @staticmethod
-    def _build_attr_mappings(**kwargs):
+    def _build_attr_mappings(self):
         collections = {
             k: v
             for k, v in {
-                "ssm": kwargs.get("ssm_paths"),
-                "secretsmanager": kwargs.get("secrets_paths"),
+                "ssm": self.ssm_paths,
+                "secretsmanager": self.secrets_paths
             }.items()
             if v is not None
         }
@@ -216,7 +208,7 @@ class AppConfig:
         for name, mapping in collections.items():
             mappings[name] = \
             {
-                item.split(kwargs.get("path_separator"))[-1]: item for item in mapping
+                item.split(self.path_separator)[-1]: item for item in mapping
             }
         return services, mappings
 
