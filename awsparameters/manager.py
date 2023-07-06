@@ -135,6 +135,9 @@ class SecretsConfigManager(ConfigManager):
         super().__init__(**kwargs)
 
 # TODO support for retrieving all params under a path (this circumvents the need for deploying a mapping parameter)
+# TODO support for loading param mappins from a file
+# TODO create a ConfigBuilder to build the param mappings from already available parameters stored in SSM/SecretsManager using a path
+# TODO integrate LambdaPowerTools as an optional dependency
 class AppConfig:
     """Class to manage the configuration of the application using SSM Parameter Store and Secrets Manager.
 
