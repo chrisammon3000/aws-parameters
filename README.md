@@ -222,7 +222,7 @@ pip install .[dev,test]
 ## Unit Tests
 Follow the steps above to create a Python virtual environment. Run tests with the following command.
 ```bash
-coverage run -m pytest
+make test
 ```
 
 ## Authors

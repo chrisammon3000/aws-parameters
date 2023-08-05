@@ -26,3 +26,6 @@ clean-build: ## clean build artifacts
 publish.test: build ## publish a release to pypi test repository.
 	@echo "🚀 Publishing."
 	@twine upload -r testpypi dist/* --verbose
+
+.PHONY: build-and-publish
+build-and-publish: build publish ## Build and publish.
