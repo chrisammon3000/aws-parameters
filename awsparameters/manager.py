@@ -3,22 +3,28 @@ import logging
 from contextlib import suppress
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Any
+from typing import Optional
 from typing import Tuple
 
 import boto3
+from mypy_boto3_secretsmanager.client import SecretsManagerClient
+from mypy_boto3_ssm.client import SSMClient
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
 @lru_cache
-def get_parameter_value(ssm_client, parameter_path: str) -> str:
+def get_parameter_value(ssm_client: SSMClient, parameter_path: str) -> Any:
     logger.info(f"Retrieving parameter {parameter_path}")
     return ssm_client.get_parameter(Name=parameter_path)["Parameter"]["Value"]
 
 
 @lru_cache
-def get_secret_value(secretsmanager_client, secret_id: str) -> str:
+def get_secret_value(
+    secretsmanager_client: SecretsManagerClient, secret_id: str
+) -> Any:
     logger.info(f"Retrieving secret {secret_id}")
     return secretsmanager_client.get_secret_value(SecretId=secret_id)[
         "SecretString"
@@ -29,33 +35,35 @@ def get_secret_value(secretsmanager_client, secret_id: str) -> str:
 class JsonModel:
     __slots__ = "__dict__"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: dict):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     def __str__(self) -> str:
         return json.dumps(self.__dict__)
 
-    def __repr__(self) -> str:
-        return self.__dict__()
-
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, key, value)
 
 
 class SessionManager:
     def __init__(
-        self, boto3_session=None, region_name: str = None, **kwargs
+        self,
+        boto3_session: Optional[boto3.Session] = None,
+        region_name: str = "us-east-1",
+        **kwargs: dict,
     ) -> None:
-        self.session = boto3_session or boto3.Session(region_name=region_name)
-        self.clients = {}  # Cache for clients
-        self.resources = {}  # Cache for resources
+        self.session: boto3.Session = boto3_session or boto3.Session(
+            region_name=region_name
+        )
+        self.clients: dict = {}  # Cache for clients
+        self.resources: dict = {}  # Cache for resources
         self._init_clients_or_resources(**kwargs)
 
-    def _init_clients_or_resources(self, **kwargs):
+    def _init_clients_or_resources(self, **kwargs: dict) -> None:
         """Initializes clients and resources from the boto3 session when created"""
 
         if "get_clients" in kwargs:
@@ -65,22 +73,22 @@ class SessionManager:
             for service in kwargs["get_resources"]:
                 self.get_resource(service)
 
-    def get_client(self, service_name: str):
+    def get_client(self, service_name: str) -> Any:
         if service_name not in self.clients:
-            self.clients[service_name] = self.session.client(service_name)
+            self.clients[service_name] = self.session.client(service_name)  # type: ignore
         return self.clients[service_name]
 
-    def get_resource(self, service_name: str):
+    def get_resource(self, service_name: str) -> Any:
         if service_name not in self.resources:
-            self.resources[service_name] = self.session.resource(service_name)
+            self.resources[service_name] = self.session.resource(service_name)  # type: ignore
         return self.resources[service_name]
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self.session, name)
 
 
 class ConfigManager(JsonModel):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: dict) -> None:
         self._service = kwargs["service"]
         self._attr_map = kwargs["attr_map"]
         self._client = kwargs["client"]
@@ -94,8 +102,8 @@ class ConfigManager(JsonModel):
                 self.__class__, name, property(getter)
             )  # create properties for each attribute
 
-    def make_getter(self, name):
-        def getter(instance):
+    def make_getter(self, name: str) -> Any:
+        def getter(instance: Any) -> Any:
             if (
                 instance.__dict__[f"_{name}"] is None
             ):  # check if the corresponding "_name" attribute is None
@@ -124,7 +132,7 @@ class ConfigManager(JsonModel):
 
         return getter
 
-    def list(self):
+    def list(self) -> list:
         return list(self._attr_map.values())
 
     def __str__(self) -> str:
@@ -136,20 +144,20 @@ class ConfigManager(JsonModel):
             }
         )
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, key, value)
 
 
 class ParamsConfigManager(ConfigManager):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: dict) -> None:
         super().__init__(**kwargs)
 
 
 class SecretsConfigManager(ConfigManager):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: dict) -> None:
         super().__init__(**kwargs)
 
 
@@ -178,20 +186,20 @@ class AppConfig:
 
     def __init__(
         self,
-        mappings_path: str = None,
+        mappings_path: Optional[str] = None,
         path_separator: str = "/",
-        boto3_session=None,
-        region_name: str = None,
+        boto3_session: Optional[Any] = None,
+        region_name: str = "us-east-1",
     ) -> None:
         self.mappings_path = mappings_path
         self.path_separator = path_separator
         self.session = SessionManager(
             boto3_session,
             region_name,
-            get_clients=["ssm"] if mappings_path else [],
+            get_clients=["ssm"] if mappings_path else [],  # type: ignore
         )
         self.ssm_paths, self.secrets_paths = (
-            self._load_service_mappings() if mappings_path else None
+            self._load_service_mappings() if mappings_path else []
         )
         self.services, self._attr_map = self._build_attr_mappings()
         for service in self.services:
@@ -202,7 +210,7 @@ class AppConfig:
                 _cls = ParamsConfigManager
             elif service == "secretsmanager":
                 attr = "secrets"
-                _cls = SecretsConfigManager
+                _cls = SecretsConfigManager  # type: ignore
             setattr(
                 self,
                 attr,
@@ -223,7 +231,7 @@ class AppConfig:
             "secretsmanager"
         )
 
-    def _build_attr_mappings(self):
+    def _build_attr_mappings(self) -> Tuple[list, dict]:
         collections = {
             k: v
             for k, v in {
@@ -241,5 +249,5 @@ class AppConfig:
         return services, mappings
 
     @property
-    def map(self):
+    def map(self) -> dict:
         return self._attr_map
