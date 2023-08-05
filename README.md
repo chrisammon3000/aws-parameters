@@ -7,13 +7,18 @@ Streamlined, efficient access to configuration values in AWS SSM Parameter Store
 ## Description
 When building applications in AWS, it is common to use SSM Parameter Store and SecretsManager to store configuration values. The `aws-parameters` library provides a simple, easy interface to access these values in a way that is fast, efficient, and secure. It is quick to setup and will perform lazy loading for all available parameters or secrets, meaning it will only call the API the first time the value is requested.
 
+The library abstracts the required boilerplate for retrieving SSM Parameters and SecretsManager secrets and provides a simple, fast way to access their values based on a one-time configuration of service-to-parameter mappings.
+
 ### How it Works
 There are 3 basics steps involved in using `aws-parameters`:
 1. Create a JSON object with service-to-parameter mappings
 2. Pass this JSON object to the `AppConfig` class
 3. Access parameters and secrets through the `params` and `secrets` attributes of the `AppConfig` instance
 
- First, you will need to create a Parameter Mappings object looking something like this:
+#### Service-to-Parameter Mappings
+A service-to-parameter mapping says which service, SSM Parameter Store (`ssm`) or SecretsManager (`secretsmanager`), is storing a given parameter.
+
+First, you will need to create a Parameter Mappings object looking something like this:
 ```json
 // param-mappings.json
 {
@@ -27,17 +32,24 @@ There are 3 basics steps involved in using `aws-parameters`:
     ]
 }
 ```
+Be aware that `aws-parameters` is opinionated about the naming convention for parameters and secrets in that it expects it to describe a path. See [Considerations](#considerations) for more details.
+
+#### Instantiating the `AppConfig` class
 Next, you can pass this object to the `AppConfig` class using several methods to create an instance. See [Configuration Methods](#configuration-methods) for more details.
 ```python
 from awsparameters import AppConfig
 
 # load the above JSON object from a file
-with open("param-config.json", "r") as f:
+with open("service-to-parameter-mappings.json", "r") as f:
     param_config = json.load(f)
 
 app = AppConfig(mappings_path=param_config)
 ```
-Lastly, you can access parameters and secrets like this:
+
+One of the big advantages of the library is that no API calls are made when you instantiate the `AppConfig` class. Instead, it will only make API calls when you access a parameter or secret through the `AppConfig.params` or `AppConfig.secrets` attributes.
+
+#### Accessing Parameters and Secrets
+Finally you can access parameters and secrets like this:
 ```python
 # access a parameter
 MyParam1 = app.params.MyParam1
@@ -45,6 +57,7 @@ MyParam1 = app.params.MyParam1
 # access a secret
 MySecret1 = app.secrets.MySecret1
 ```
+This will initiate API calls to AWS to retrieve the values of the parameters and secrets. The values will be cached so that subsequent calls will not require additional API calls.
 
 ### Advantages
 - Fast, simple interface to configuration values that can reduce development overhead when working with SSM Parameter Store and SecretsManager
