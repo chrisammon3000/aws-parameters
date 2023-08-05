@@ -1,71 +1,69 @@
 import json
-import pytest
-from unittest.mock import Mock, patch
-from tests.unit.fixtures import (
-    aws_credentials,
-    ssm,
-    test_param,
-    secretsmanager,
-    test_secret,
-    boto3_session
-)
-from awsparameters.manager import (
-    get_parameter_value,
-    get_secret_value,
-    JsonModel,
-    SessionManager,
-    ConfigManager,
-    AppConfig
-)
 
-def test_get_parameter_value(ssm, test_param):
+import pytest  # noqa: F401
+
+from awsparameters.manager import AppConfig
+from awsparameters.manager import ConfigManager
+from awsparameters.manager import JsonModel
+from awsparameters.manager import SessionManager
+from awsparameters.manager import get_parameter_value
+from awsparameters.manager import get_secret_value
+from tests.unit.fixtures import aws_credentials  # noqa: F401
+from tests.unit.fixtures import boto3_session  # noqa: F401
+from tests.unit.fixtures import secretsmanager  # noqa: F401
+from tests.unit.fixtures import ssm  # noqa: F401
+from tests.unit.fixtures import test_param  # noqa: F401
+from tests.unit.fixtures import test_secret  # noqa: F401
+
+
+def test_get_parameter_value(ssm, test_param):  # noqa: F811
     parameter_path, parameter_value = test_param
 
     ssm.put_parameter(
         Name=parameter_path,
         Value=parameter_value,
         Type="String",
-        Overwrite=True
+        Overwrite=True,
     )
 
     assert get_parameter_value(ssm, parameter_path) == parameter_value
 
-def test_get_secret_value(secretsmanager, test_secret):
+
+def test_get_secret_value(secretsmanager, test_secret):  # noqa: F811
     secret_path, secret_value = test_secret
 
-    secretsmanager.create_secret(
-        Name=secret_path,
-        SecretString=secret_value
-    )
+    secretsmanager.create_secret(Name=secret_path, SecretString=secret_value)
 
     assert get_secret_value(secretsmanager, secret_path) == secret_value
 
+
 def test_json_model():
-    test_dict = {
-        "test_key_1": "test_value_1",
-        "test_key_2": "test_value_2"
-    }
+    test_dict = {"test_key_1": "test_value_1", "test_key_2": "test_value_2"}
 
     test_model = JsonModel(**test_dict)
 
     assert test_model.test_key_1 == test_dict["test_key_1"]
     assert test_model.test_key_2 == test_dict["test_key_2"]
 
-def test_session_manager(boto3_session):
+
+def test_session_manager(boto3_session):  # noqa: F811
     session_manager = SessionManager(boto3_session=boto3_session)
     assert session_manager.session == boto3_session
     assert session_manager.clients == {}
     assert session_manager.resources == {}
 
     # test get_client
-    ssm = session_manager.get_client("ssm")
+    ssm = session_manager.get_client("ssm")  # noqa: F811
     assert session_manager.clients["ssm"] == ssm
 
     # test get_resource
     dynamodb = session_manager.get_resource("dynamodb")
     assert session_manager.resources["dynamodb"] == dynamodb
 
-def test_config_manager(ssm, secretsmanager, test_param, test_secret):
+
+def test_config_manager(
+    ssm, secretsmanager, test_param, test_secret  # noqa: F811
+):  # noqa: F811
     test_param_path, test_param_value = test_param
     test_secret_path, test_secret_value = test_secret
 
@@ -73,29 +71,22 @@ def test_config_manager(ssm, secretsmanager, test_param, test_secret):
         Name=test_param_path,
         Value=test_param_value,
         Type="String",
-        Overwrite=True
+        Overwrite=True,
     )
 
     secretsmanager.create_secret(
-        Name=test_secret_path,
-        SecretString=test_secret_value
+        Name=test_secret_path, SecretString=test_secret_value
     )
 
     test_param_config = ConfigManager(
-        service="ssm",
-        attr_map={
-            "test_param": test_param_path
-        },
-        client=ssm
+        service="ssm", attr_map={"test_param": test_param_path}, client=ssm
     )
     assert test_param_config.test_param == test_param_value
 
     test_secret_config = ConfigManager(
         service="secretsmanager",
-        attr_map={
-            "test_secret": test_secret_path
-        },
-        client=secretsmanager
+        attr_map={"test_secret": test_secret_path},
+        client=secretsmanager,
     )
     assert test_secret_config.test_secret == test_secret_value
 
@@ -104,17 +95,16 @@ def test_config_manager(ssm, secretsmanager, test_param, test_secret):
     # assert isinstance(list(test_param_config), list)
     # assert isinstance(list(test_secret_config), list)
 
-def test_app_config(boto3_session, ssm, secretsmanager, test_param, test_secret):
+
+def test_app_config(
+    boto3_session, ssm, secretsmanager, test_param, test_secret  # noqa: F811
+):
     test_param_path, test_param_value = test_param
     test_secret_path, test_secret_value = test_secret
 
     mappings_path = {
-        "ssm": [
-            test_param_path
-        ],
-        "secretsmanager": [
-            test_secret_path
-        ]
+        "ssm": [test_param_path],
+        "secretsmanager": [test_secret_path],
     }
 
     # create a parameter of mappings_path
@@ -122,25 +112,24 @@ def test_app_config(boto3_session, ssm, secretsmanager, test_param, test_secret)
         Name="/test/mappings_path",
         Value=json.dumps(mappings_path),
         Type="String",
-        Overwrite=True
+        Overwrite=True,
     )
 
     ssm.put_parameter(
         Name=test_param_path,
         Value=test_param_value,
         Type="String",
-        Overwrite=True
+        Overwrite=True,
     )
 
     secretsmanager.create_secret(
-        Name=test_secret_path,
-        SecretString=test_secret_value
+        Name=test_secret_path, SecretString=test_secret_value
     )
 
     test_config = AppConfig(
         mappings_path="/test/mappings_path",
         boto3_session=boto3_session,
-        region_name="us-east-1"
+        region_name="us-east-1",
     )
 
     assert test_config.session.session.region_name == "us-east-1"
@@ -148,12 +137,8 @@ def test_app_config(boto3_session, ssm, secretsmanager, test_param, test_secret)
     assert test_config.secrets_paths == [test_secret_path]
     assert test_config.services == ["ssm", "secretsmanager"]
     assert test_config._attr_map == {
-        "ssm": {
-            test_param_path.split("/")[-1]: test_param_path
-        },
-        "secretsmanager": {
-            test_secret_path.split("/")[-1]: test_secret_path
-        }
+        "ssm": {test_param_path.split("/")[-1]: test_param_path},
+        "secretsmanager": {test_secret_path.split("/")[-1]: test_secret_path},
     }
 
     # path variables from test_param and test_secret should be available as attributes:

@@ -1,10 +1,10 @@
+import json
 import logging
-from typing import Union, Tuple
+from contextlib import suppress
 from dataclasses import dataclass
 from functools import lru_cache
-import re
-import json
-from typing import Any
+from typing import Tuple
+
 import boto3
 
 logger = logging.getLogger(__name__)
@@ -114,10 +114,8 @@ class ConfigManager(JsonModel):
                     )
 
                 # detect json
-                try:
+                with suppress(json.JSONDecodeError):
                     value = json.loads(value)
-                except json.JSONDecodeError:
-                    pass
 
                 instance.__dict__[f"_{name}"] = (
                     value  # store the value in "_name" attribute
@@ -221,8 +219,8 @@ class AppConfig:
                 "Parameter"
             ]["Value"]
         )
-        return service_mappings.get("ssm", None), service_mappings.get(
-            "secretsmanager", None
+        return service_mappings.get("ssm"), service_mappings.get(
+            "secretsmanager"
         )
 
     def _build_attr_mappings(self):

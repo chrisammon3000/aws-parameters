@@ -32,10 +32,11 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black>=21.12",
+    "pre-commit>=2.20.0"
 ]
 test = [
-    "pytest>=6.2",
-    "pytest-cov>=3.0",
+    "pytest>=7.2.0",
+    "pytest-cov>=4.0",
     "coverage>=6.0",
     "boto3>=1.20",
     "moto[ssm,secretsmanager]>=2.2",
@@ -45,6 +46,11 @@ test = [
 line-length = 79
 target-version = ['py310']
 preview = true
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+force_single_line = "True"
 
 [tool.coverage.report]
 skip_empty = true
