@@ -58,4 +58,4 @@ jobs:
           python -m pip install tox
 
       - name: Test with tox
-        run: tox -e py${{ matrix.python-version }} --cov --cov-config=pyproject.toml --cov-report=xml
+        run: tox -e py${{ matrix.python-version }}
