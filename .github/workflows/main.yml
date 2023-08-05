@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -68,6 +70,5 @@ jobs:
         uses: chrisammon3000/aws-parameters/.github/actions/publish-to-test-pypi@main
         with:
           TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          python-version: '3.x'
+          python-version: "3.x"
           PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        
