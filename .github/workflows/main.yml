@@ -59,3 +59,15 @@ jobs:
 
       - name: Test with tox
         run: tox -e py${{ matrix.python-version }}
+
+  publish:
+    needs: tox
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish to PyPI and TestPyPI
+        uses: chrisammon3000/publish-to-test-pypi@main
+        with:
+          TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        #   PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          python-version: '3.x'
+        
