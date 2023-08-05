@@ -103,6 +103,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+.dmypy.json
+dmypy.json
 
 # IDE settings
 .vscode/

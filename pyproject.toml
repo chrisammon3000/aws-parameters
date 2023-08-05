@@ -10,8 +10,8 @@ write_to = "awsparameters/_version.py"
 
 [project]
 name = "aws-parameters"
-version = "0.1.4"
-description = "Access AWS configurations in a streamlined and efficient manner."
+version = "0.1.6"
+description = "Streamlined, efficient access to configuration values in AWS SSM Parameter Store and SecretsManager."
 authors = [{ name = "@chrisammon3000", email = "gclindsey@gmail.com" }]
 license = {file = "LICENSE"}
 readme = "README.md"
@@ -32,20 +32,38 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black>=21.12",
+    "pre-commit>=2.20.0",
+    "mypy>=1.4.1",
+    "boto3-stubs[secretsmanager,ssm]>=1.15.3"
 ]
 test = [
-    "pytest>=6.2",
-    "pytest-cov>=3.0",
+    "pytest>=7.2.0",
+    "pytest-cov>=4.0",
     "coverage>=6.0",
-    "black>=21.12",
     "boto3>=1.20",
-    "moto[sqs,sns,firehose,s3,sts]>=2.2",
+    "moto[ssm,secretsmanager]>=2.2",
+    "tox>=4.6.4"
 ]
 
 [tool.black]
 line-length = 79
 target-version = ['py310']
 preview = true
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+force_single_line = "True"
+
+[tool.mypy]
+files = ["awsparameters"]
+disallow_untyped_defs = "True"
+disallow_any_unimported = "True"
+no_implicit_optional = "True"
+check_untyped_defs = "True"
+warn_return_any = "True"
+warn_unused_ignores = "True"
+show_error_codes = "True"
 
 [tool.coverage.report]
 skip_empty = true
