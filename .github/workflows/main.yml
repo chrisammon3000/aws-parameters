@@ -62,7 +62,7 @@ jobs:
       - name: Test with tox
         run: tox -e py${{ matrix.python-version }}
 
-  publish:
+  publish-test-pypi:
     needs: tox
     runs-on: ubuntu-latest
     steps:
