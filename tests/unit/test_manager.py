@@ -9,7 +9,7 @@ from awsparameters.manager import SessionManager
 from awsparameters.manager import get_parameter_value
 from awsparameters.manager import get_secret_value
 from tests.unit.fixtures import aws_credentials  # noqa: F401
-from tests.unit.fixtures import boto3_session  # noqa: F401
+from tests.unit.fixtures import boto3_session  # type: ignore_session  # noqa: F401
 from tests.unit.fixtures import secretsmanager  # noqa: F401
 from tests.unit.fixtures import ssm  # noqa: F401
 from tests.unit.fixtures import test_param  # noqa: F401

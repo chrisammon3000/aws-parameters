@@ -1,6 +1,6 @@
 import os
 
-import boto3
+import boto3  # type: ignore
 import pytest
 from moto import mock_secretsmanager
 from moto import mock_ssm
