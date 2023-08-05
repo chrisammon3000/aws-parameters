@@ -11,11 +11,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def camel_to_snake(name):
-    name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()
-
-
 @lru_cache
 def get_parameter_value(ssm_client, parameter_path: str) -> str:
     logger.info(f"Retrieving parameter {parameter_path}")
@@ -135,9 +130,10 @@ class SecretsConfigManager(ConfigManager):
         super().__init__(**kwargs)
 
 # TODO support for retrieving all params under a path (this circumvents the need for deploying a mapping parameter)
-# TODO support for loading param mappins from a file
+# TODO support for loading param mappings from a file
 # TODO create a ConfigBuilder to build the param mappings from already available parameters stored in SSM/SecretsManager using a path
 # TODO integrate LambdaPowerTools as an optional dependency
+# TODO add json() method
 class AppConfig:
     """Class to manage the configuration of the application using SSM Parameter Store and Secrets Manager.
 
@@ -193,7 +189,7 @@ class AppConfig:
 
     def _load_service_mappings(self) -> Tuple[dict, dict]:
         service_mappings = json.loads(self.session.clients["ssm"].get_parameter(
-            Name=self.mappings_path,
+            Name=self.mappings_path
         )["Parameter"]["Value"])
         return service_mappings.get("ssm", None), service_mappings.get("secretsmanager", None)
 
