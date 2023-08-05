@@ -1,7 +1,7 @@
 .PHONY: check
 check: ## Run code quality tools.
 	@echo "🚀 Linting code: Running pre-commit"
-	@pre-commit run -a
+	@pre-commit run -a --show-diff-on-failure
 	@echo "🚀 Static type checking: Running mypy"
 	@mypy
 
