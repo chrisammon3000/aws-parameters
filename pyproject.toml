@@ -10,7 +10,7 @@ write_to = "awsparameters/_version.py"
 
 [project]
 name = "aws-parameters"
-version = "attr: setuptools_scm.get_version"
+# version = "attr: setuptools_scm.get_version"
 description = "Streamlined, efficient access to configuration values in AWS SSM Parameter Store and SecretsManager."
 authors = [{ name = "@chrisammon3000", email = "gclindsey@gmail.com" }]
 license = {file = "LICENSE"}
