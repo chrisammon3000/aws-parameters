@@ -75,12 +75,12 @@ class SessionManager:
 
     def get_client(self, service_name: str) -> Any:
         if service_name not in self.clients:
-            self.clients[service_name] = self.session.client(service_name)  # type: ignore
+            self.clients[service_name] = self.session.client(service_name)
         return self.clients[service_name]
 
     def get_resource(self, service_name: str) -> Any:
         if service_name not in self.resources:
-            self.resources[service_name] = self.session.resource(service_name)  # type: ignore
+            self.resources[service_name] = self.session.resource(service_name)
         return self.resources[service_name]
 
     def __getattr__(self, name: str) -> Any:
